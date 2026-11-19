@@ -1,0 +1,28 @@
+name: Encode demo video
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - .github/workflows/encode-demo.yml
+permissions:
+  contents: write
+jobs:
+  encode:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install ffmpeg
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+      - name: Encode demo smaller
+        run: |
+          ffprobe -v error -select_streams v:0 -show_entries stream=width,height,r_frame_rate,bit_rate -of csv=p=0 demo.mp4
+          ffmpeg -y -i demo.mp4 -vf "scale=-2:'min(960,ih)'" -c:v libx264 -profile:v high -level 4.0 -pix_fmt yuv420p -crf 28 -preset slow -an -movflags +faststart demo-web.mp4
+          ls -lh *.mp4
+      - name: Commit results
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm -q demo-h264.mp4
+          git add demo-web.mp4
+          git commit -m "Add smaller H.264 demo video"
+          git push
